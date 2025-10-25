@@ -1,8 +1,8 @@
 package app.controllers.impl;
 
-import dat.exceptions.ApiException;
-import dat.exceptions.Message;
-import dat.routes.Routes;
+import app.exceptions.ApiException;
+import app.exceptions.Message;
+import app.routes.Routes;
 import io.javalin.http.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

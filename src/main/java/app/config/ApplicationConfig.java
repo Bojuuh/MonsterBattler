@@ -1,13 +1,13 @@
 package app.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dat.routes.Routes;
-import dat.security.controllers.AccessController;
-import dat.security.controllers.SecurityController;
-import dat.security.enums.Role;
-import dat.security.exceptions.ApiException;
-import dat.security.routes.SecurityRoutes;
-import dat.utils.Utils;
+import app.routes.Routes;
+import app.security.controllers.AccessController;
+import app.security.controllers.SecurityController;
+import app.security.enums.Role;
+import app.security.exceptions.ApiException;
+import app.security.routes.SecurityRoutes;
+import app.utils.Utils;
 import io.javalin.Javalin;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;

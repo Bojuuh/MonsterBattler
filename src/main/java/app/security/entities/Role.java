@@ -1,50 +1,34 @@
 package app.security.entities;
 
 import jakarta.persistence.*;
-import lombok.ToString;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.io.Serial;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Purpose: To handle security in the API
- *  Author: Thomas Hartmann
- */
+@Getter
+@Setter
+@NoArgsConstructor
 @Entity
 @Table(name = "roles")
-@NamedQueries(@NamedQuery(name = "Role.deleteAllRows", query = "DELETE from Role"))
 public class Role implements Serializable {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
-
     @Id
-    @Basic(optional = false)
-    @Column(name = "name", length = 20)
+    @Column(name = "name", length = 50, nullable = false, unique = true)
     private String name;
 
-    @ToString.Exclude
-    @ManyToMany(mappedBy = "roles")
+    @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
     private Set<User> users = new HashSet<>();
 
-    public Role() {}
-
-    public Role(String roleName) {
-        this.name = roleName;
+    public Role(String name) {
+        this.name = name;
     }
 
+    // Keep the method name used across the project
     public String getRoleName() {
-        return name;
-    }
-
-    public Set<User> getUsers() {
-        return users;
-    }
-
-    @Override
-    public String toString() {
-        return "Role{" + "roleName='" + name + '\'' + '}';
+        return this.name;
     }
 }

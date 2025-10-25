@@ -1,0 +1,7 @@
+1. Remake security
+2. Roles:
+- Admin: able to delete users and monsters
+- Standard: usual player
+- Founder: able to play against "new" monsters
+3. Make battles work - Print out json
+4.

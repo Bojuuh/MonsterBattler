@@ -2,7 +2,7 @@ package app.daos.impl;
 
 import app.dtos.HeroDTO;
 import app.entities.Hero;
-import app.config.HibernateConfig;
+import app.daos.IDAO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.TypedQuery;
@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
-public class HeroDAO {
+public class HeroDAO implements IDAO<Hero, Integer> {
 
     private static HeroDAO instance;
     private static EntityManagerFactory emf;
@@ -24,6 +24,7 @@ public class HeroDAO {
         return instance;
     }
 
+    @Override
     public Hero create(Hero hero) {
         try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
@@ -33,23 +34,30 @@ public class HeroDAO {
         }
     }
 
+    @Override
     public Hero read(Integer id) {
         try (EntityManager em = emf.createEntityManager()) {
             return em.find(Hero.class, id);
         }
     }
 
-    public List<HeroDTO> readAll() {
+    @Override
+    public List<Hero> readAll() {
         try (EntityManager em = emf.createEntityManager()) {
-            TypedQuery<HeroDTO> q = em.createQuery("SELECT new app.dtos.HeroDTO(h) FROM Hero h", HeroDTO.class);
+            TypedQuery<Hero> q = em.createQuery("SELECT h FROM Hero h", Hero.class);
             return q.getResultList();
         }
     }
 
+    @Override
     public Hero update(Integer id, Hero updated) {
         try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
             Hero h = em.find(Hero.class, id);
+            if (h == null) {
+                em.getTransaction().commit();
+                return null;
+            }
             h.setName(updated.getName());
             h.setLevel(updated.getLevel());
             h.setHp(updated.getHp());
@@ -62,6 +70,7 @@ public class HeroDAO {
         }
     }
 
+    @Override
     public void delete(Integer id) {
         try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
@@ -70,5 +79,9 @@ public class HeroDAO {
             em.getTransaction().commit();
         }
     }
-}
 
+    @Override
+    public boolean validatePrimaryKey(Integer id) {
+        return id != null && id > 0;
+    }
+}

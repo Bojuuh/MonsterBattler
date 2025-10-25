@@ -1,57 +1,58 @@
+// java
 package app.config;
 
+import app.config.HibernateConfig;
+import app.daos.impl.HeroDAO;
+import app.daos.impl.MonsterDAO;
+import app.entities.Hero;
+import app.entities.Monster;
 
-import dat.entities.Hotel;
-import dat.entities.Room;
-import jakarta.persistence.EntityManagerFactory;
-import org.jetbrains.annotations.NotNull;
+import java.util.List;
 
-import java.math.BigDecimal;
-import java.util.Set;
-
+/**
+ * Simple DB populator for heroes and monsters.
+ * Call Populate.populate() at startup or run the main method to seed the DB.
+ */
 public class Populate {
-    public static void main(String[] args) {
 
-        EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
+    public static void populate() {
+        var emf = HibernateConfig.getEntityManagerFactory();
+        HeroDAO heroDao = HeroDAO.getInstance(emf);
+        MonsterDAO monsterDao = MonsterDAO.getInstance(emf);
 
-        Set<Room> calRooms = getCalRooms();
-        Set<Room> hilRooms = getHilRooms();
+        List<Hero> existingHeroes = heroDao.readAll();
+        List<Monster> existingMonsters = monsterDao.readAll();
 
-        try (var em = emf.createEntityManager()) {
-            em.getTransaction().begin();
-            Hotel california = new Hotel("Hotel California", "California", Hotel.HotelType.LUXURY);
-            Hotel hilton = new Hotel("Hilton", "Copenhagen", Hotel.HotelType.STANDARD);
-            california.setRooms(calRooms);
-            hilton.setRooms(hilRooms);
-            em.persist(california);
-            em.persist(hilton);
-            em.getTransaction().commit();
+        if (!existingHeroes.isEmpty() || !existingMonsters.isEmpty()) {
+            System.out.println("Database already contains heroes or monsters - skipping populate.");
+            return;
         }
+
+        // Heroes
+        Hero h1 = new Hero("Sir Gallant", 1, 100, 12, 6, 0);
+        Hero h2 = new Hero("Aria Swift", 2, 120, 15, 8, 10);
+        Hero h3 = new Hero("Dorn Ironfist", 3, 150, 18, 12, 30);
+
+        heroDao.create(h1);
+        heroDao.create(h2);
+        heroDao.create(h3);
+
+        // Monsters
+        Monster m1 = new Monster("Goblin", 1, 60, 8, 3, "Caves", 30);
+        Monster m2 = new Monster("Wolf", 1, 70, 10, 4, "Forest", 25);
+        Monster m3 = new Monster("Orc Brute", 2, 120, 14, 7, "Hills", 15);
+        Monster m4 = new Monster("Stone Golem", 4, 250, 20, 18, "Ruins", 5);
+
+        monsterDao.create(m1);
+        monsterDao.create(m2);
+        monsterDao.create(m3);
+        monsterDao.create(m4);
+
+        System.out.println("Populated heroes and monsters into the database.");
     }
 
-    @NotNull
-    private static Set<Room> getCalRooms() {
-        Room r100 = new Room(100, new BigDecimal(2520), Room.RoomType.SINGLE);
-        Room r101 = new Room(101, new BigDecimal(2520), Room.RoomType.SINGLE);
-        Room r102 = new Room(102, new BigDecimal(2520), Room.RoomType.SINGLE);
-        Room r103 = new Room(103, new BigDecimal(2520), Room.RoomType.SINGLE);
-        Room r104 = new Room(104, new BigDecimal(3200), Room.RoomType.DOUBLE);
-        Room r105 = new Room(105, new BigDecimal(4500), Room.RoomType.SUITE);
-
-        Room[] roomArray = {r100, r101, r102, r103, r104, r105};
-        return Set.of(roomArray);
-    }
-
-    @NotNull
-    private static Set<Room> getHilRooms() {
-        Room r111 = new Room(111, new BigDecimal(2520), Room.RoomType.SINGLE);
-        Room r112 = new Room(112, new BigDecimal(2520), Room.RoomType.SINGLE);
-        Room r113 = new Room(113, new BigDecimal(2520), Room.RoomType.SINGLE);
-        Room r114 = new Room(114, new BigDecimal(2520), Room.RoomType.DOUBLE);
-        Room r115 = new Room(115, new BigDecimal(3200), Room.RoomType.DOUBLE);
-        Room r116 = new Room(116, new BigDecimal(4500), Room.RoomType.SUITE);
-
-        Room[] roomArray = {r111, r112, r113, r114, r115, r116};
-        return Set.of(roomArray);
+    public static void main(String[] args) {
+        populate();
+        System.out.println("Populate finished.");
     }
 }

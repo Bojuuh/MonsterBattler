@@ -1,89 +1,109 @@
 package app.security.daos;
 
-
-import dat.security.entities.Role;
-import dat.security.entities.User;
-import dat.security.exceptions.ApiException;
-import dat.security.exceptions.ValidationException;
-import dk.bugelhartmann.UserDTO;
-import jakarta.persistence.EntityExistsException;
+import app.config.HibernateConfig;
+import app.security.entities.Role;
+import app.security.entities.User;
+import app.security.exceptions.ValidationException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.TypedQuery;
+import org.mindrot.jbcrypt.BCrypt;
 
+import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-
-/**
- * Purpose: To handle security in the API
- * Author: Thomas Hartmann
- */
 public class SecurityDAO implements ISecurityDAO {
 
-    private static ISecurityDAO instance;
+    private static SecurityDAO instance;
     private static EntityManagerFactory emf;
 
-    public SecurityDAO(EntityManagerFactory _emf) {
+    private SecurityDAO(EntityManagerFactory _emf) {
         emf = _emf;
     }
 
-    private EntityManager getEntityManager() {
-        return emf.createEntityManager();
+    public static SecurityDAO getInstance(EntityManagerFactory _emf) {
+        if (instance == null) {
+            instance = new SecurityDAO(_emf);
+        }
+        return instance;
     }
 
     @Override
-    public UserDTO getVerifiedUser(String username, String password) throws ValidationException {
-        try (EntityManager em = getEntityManager()) {
-            User user = em.find(User.class, username);
-            if (user == null)
-                throw new EntityNotFoundException("No user found with username: " + username); //RuntimeException
-            user.getRoles().size(); // force roles to be fetched from db
-            if (!user.verifyPassword(password))
-                throw new ValidationException("Wrong password");
-            return new UserDTO(user.getUsername(), user.getRoles().stream().map(r -> r.getRoleName()).collect(Collectors.toSet()));
+    public User getVerifiedUser(String username, String password) throws ValidationException {
+        try (EntityManager em = emf.createEntityManager()) {
+            TypedQuery<User> q = em.createQuery("SELECT u FROM User u WHERE u.username = :u", User.class);
+            q.setParameter("u", username);
+            User user;
+            try {
+                user = q.getSingleResult();
+            } catch (NoResultException e) {
+                throw new ValidationException("Invalid username or password");
+            }
+            if (user.verifyPassword(password)) {
+                return user;
+            } else {
+                throw new ValidationException("Invalid username or password");
+            }
         }
     }
 
     @Override
     public User createUser(String username, String password) {
-        try (EntityManager em = getEntityManager()) {
-            User userEntity = em.find(User.class, username);
-            if (userEntity != null)
-                throw new EntityExistsException("User with username: " + username + " already exists");
-            userEntity = new User(username, password);
+        try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
-            Role userRole = em.find(Role.class, "user");
-            if (userRole == null)
-                userRole = new Role("user");
-            em.persist(userRole);
-            userEntity.addRole(userRole);
-            em.persist(userEntity);
+            // Check if exists
+            User exists = em.find(User.class, username);
+            if (exists != null) {
+                em.getTransaction().rollback();
+                throw new IllegalArgumentException("User already exists");
+            }
+            User newUser = new User(username, password); // constructor already hashes password
+            // Add default role STANDARD (create if missing)
+            Role defaultRole = em.find(Role.class, "STANDARD");
+            if (defaultRole == null) {
+                defaultRole = new Role("STANDARD");
+                em.persist(defaultRole);
+            }
+            newUser.addRole(defaultRole);
+            em.persist(newUser);
             em.getTransaction().commit();
-            return userEntity;
-        }catch (Exception e){
-            e.printStackTrace();
-            throw new ApiException(400, e.getMessage());
+            return newUser;
         }
     }
 
     @Override
-    public User addRole(UserDTO userDTO, String newRole) {
-        try (EntityManager em = getEntityManager()) {
-            User user = em.find(User.class, userDTO.getUsername());
-            if (user == null)
-                throw new EntityNotFoundException("No user found with username: " + userDTO.getUsername());
+    public Role createRole(String roleName) {
+        try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
-                Role role = em.find(Role.class, newRole);
-                if (role == null) {
-                    role = new Role(newRole);
-                    em.persist(role);
-                }
-                user.addRole(role);
-                //em.merge(user);
+            Role r = em.find(Role.class, roleName);
+            if (r == null) {
+                r = new Role(roleName);
+                em.persist(r);
+            }
             em.getTransaction().commit();
-            return user;
+            return r;
+        }
+    }
+
+    @Override
+    public User addUserRole(String username, String roleName) {
+        try (EntityManager em = emf.createEntityManager()) {
+            em.getTransaction().begin();
+            User u = em.find(User.class, username);
+            if (u == null) {
+                em.getTransaction().rollback();
+                throw new IllegalArgumentException("User not found");
+            }
+            Role r = em.find(Role.class, roleName);
+            if (r == null) {
+                r = new Role(roleName);
+                em.persist(r);
+            }
+            u.addRole(r);
+            User merged = em.merge(u);
+            em.getTransaction().commit();
+            return merged;
         }
     }
 }
-
