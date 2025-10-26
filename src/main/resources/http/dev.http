@@ -96,7 +96,7 @@ Authorization: Bearer {{jwt_token}}
 
 ###
 ### battle details test variable
-@battle_id = 5
+@battle_id = 1
 ###
 # Get last battle details
 GET {{url}}/battles/{{battle_id}}/details
