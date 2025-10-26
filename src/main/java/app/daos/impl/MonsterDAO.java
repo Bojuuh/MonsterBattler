@@ -85,4 +85,25 @@ public class MonsterDAO implements IDAO<Monster, Integer> {
     public boolean validatePrimaryKey(Integer id) {
         return id != null && id > 0;
     }
+
+    public void populate() {
+        try (var em = emf.createEntityManager()){
+            em
+                    .getTransaction()
+                    .begin();
+            Monster m1 = new Monster("Goblin", 1, 60, 8, 3, "Caves", 30);
+            Monster m2 = new Monster("Wolf", 1, 70, 10, 4, "Forest", 25);
+            Monster m3 = new Monster("Orc Brute", 2, 120, 14, 7, "Hills", 15);
+            Monster m4 = new Monster("Stone Golem", 4, 250, 20, 18, "Ruins", 5);
+
+            em.persist(m1);
+            em.persist(m2);
+            em.persist(m3);
+            em.persist(m4);
+
+            em
+                    .getTransaction()
+                    .commit();
+        }
+    }
 }

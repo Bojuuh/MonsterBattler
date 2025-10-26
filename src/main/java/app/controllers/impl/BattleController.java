@@ -1,165 +1,169 @@
 package app.controllers.impl;
 
 import app.config.HibernateConfig;
+import app.controllers.IController;
 import app.daos.impl.BattleDAO;
+import app.daos.impl.HeroDAO;
+import app.daos.impl.MonsterDAO;
 import app.dtos.BattleDTO;
+import app.dtos.BattleLogDTO;
+import app.dtos.BattleResultDTO;
 import app.entities.Battle;
 import app.entities.BattleLog;
 import app.entities.Hero;
 import app.entities.Monster;
-import app.controllers.IController;
 import io.javalin.http.Context;
 import jakarta.persistence.EntityManagerFactory;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Comparator;
 
-/**
- * Simple deterministic battle logic:
- * - Hero attacks first.
- * - Damage = max(1, attacker.attack - defender.defense)
- * - Alternate until one HP <= 0.
- * - XP awarded = max(0, monster.level * 5) on victory.
- */
 public class BattleController implements IController<Battle, Integer> {
-
-    private final BattleDAO dao;
+    private final BattleDAO battleDao;
+    private final HeroDAO heroDao;
+    private final MonsterDAO monsterDao;
 
     public BattleController() {
         EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
-        this.dao = BattleDAO.getInstance(emf);
+        this.battleDao = BattleDAO.getInstance(emf);
+        this.heroDao = HeroDAO.getInstance(emf);
+        this.monsterDao = MonsterDAO.getInstance(emf);
     }
 
     public void startBattle(Context ctx) {
-        StartRequest req = ctx.bodyAsClass(StartRequest.class);
-        // Build minimal entities with ids (full managed copy will be loaded in DAO)
-        Hero hero = new Hero();
-        hero.setId(req.heroId);
-        Monster monster = new Monster();
-        monster.setId(req.monsterId);
+        var input = ctx.bodyAsClass(BattleStartDTO.class);
+        Hero hero = heroDao.read(input.heroId());
+        Monster monster = monsterDao.read(input.monsterId());
 
+        if (hero == null || monster == null) {
+            ctx.status(404).json("Hero or monster not found");
+            return;
+        }
+
+        Battle battle = simulateBattle(hero, monster);
+        Battle savedBattle = battleDao.create(battle);
+
+        if("VICTORY".equals(battle.getResult())){
+            hero.setXp(hero.getXp() + battle.getXpGained());
+            heroDao.update(hero.getId(), hero);
+        }
+
+        ctx.status(201).json(new BattleDTO(savedBattle));
+    }
+
+    private Battle simulateBattle(Hero hero, Monster monster) {
         Battle battle = new Battle();
         battle.setHero(hero);
         battle.setMonster(monster);
 
-        // Simple simulation
-        int hHp = req.heroHp != null ? req.heroHp : 100;
-        int hAtk = req.heroAttack != null ? req.heroAttack : 10;
-        int hDef = req.heroDefense != null ? req.heroDefense : 5;
-
-        int mHp = req.monsterHp != null ? req.monsterHp : 80;
-        int mAtk = req.monsterAttack != null ? req.monsterAttack : 8;
-        int mDef = req.monsterDefense != null ? req.monsterDefense : 4;
-
+        int heroHp = hero.getHp();
+        int monsterHp = monster.getHp();
         int turn = 1;
         boolean heroTurn = true;
-        while (hHp > 0 && mHp > 0) {
+
+        while (heroHp > 0 && monsterHp > 0) {
             if (heroTurn) {
-                int dmg = Math.max(1, hAtk - mDef);
-                mHp -= dmg;
-                battle.addLog(new BattleLog(turn, req.heroName != null ? req.heroName : "Hero", req.monsterName != null ? req.monsterName : "Monster", dmg, Math.max(0, mHp)));
+                int damage = Math.max(1, hero.getAttack() - monster.getDefense());
+                monsterHp -= damage;
+                battle.addLog(new BattleLog(turn, hero.getName(), monster.getName(), damage, Math.max(0, monsterHp)));
             } else {
-                int dmg = Math.max(1, mAtk - hDef);
-                hHp -= dmg;
-                battle.addLog(new BattleLog(turn, req.monsterName != null ? req.monsterName : "Monster", req.heroName != null ? req.heroName : "Hero", dmg, Math.max(0, hHp)));
+                int damage = Math.max(1, monster.getAttack() - hero.getDefense());
+                heroHp -= damage;
+                battle.addLog(new BattleLog(turn, monster.getName(), hero.getName(), damage, Math.max(0, heroHp)));
             }
             heroTurn = !heroTurn;
             turn++;
         }
 
-        if (mHp <= 0 && hHp > 0) {
+        determineBattleResult(battle, heroHp, monsterHp, monster.getLevel());
+        return battle;
+    }
+
+
+    private void determineBattleResult(Battle battle, int heroHp, int monsterHp, int monsterLevel) {
+        if (monsterHp <= 0 && heroHp > 0) {
             battle.setResult("VICTORY");
-            battle.setXpGained(Math.max(0, req.monsterLevel != null ? req.monsterLevel * 5 : 5));
-        } else if (hHp <= 0 && mHp > 0) {
+            battle.setXpGained(Math.max(0, monsterLevel * 5));
+        } else if (heroHp <= 0 && monsterHp > 0) {
             battle.setResult("DEFEAT");
             battle.setXpGained(0);
         } else {
             battle.setResult("DRAW");
             battle.setXpGained(0);
         }
-
-        Battle persisted = dao.create(battle);
-        ctx.status(201);
-        ctx.json(new BattleDTO(persisted));
-    }
-
-    @Override
-    public void readAll(Context ctx) {
-        List<Battle> list = dao.readAll();
-        List<BattleDTO> dtoList = list.stream().map(BattleDTO::new).collect(Collectors.toList());
-        ctx.status(200);
-        ctx.json(dtoList);
     }
 
     @Override
     public void read(Context ctx) {
         int id = ctx.pathParamAsClass("id", Integer.class).get();
-        Battle b = dao.read(id);
-        ctx.status(b != null ? 200 : 404);
-        ctx.json(b != null ? new BattleDTO(b) : "{ \"status\": 404, \"msg\": \"Not found\" }");
+        Battle battle = battleDao.read(id);
+        if (battle == null) {
+            ctx.status(404).json("Battle not found");
+            return;
+        }
+        ctx.json(new BattleDTO(battle));
+    }
+
+    public void getBattleDetails(Context ctx) {
+        int id = ctx.pathParamAsClass("id", Integer.class).get();
+        Battle battle = battleDao.read(id);
+        if (battle == null) {
+            ctx.status(404).json("Battle not found");
+            return;
+        }
+
+        var logs = battle.getLogs().stream()
+                .sorted(Comparator.comparing(BattleLog::getTurnNumber))
+                .map(log -> new BattleLogDTO(
+                        log.getTurnNumber(),
+                        log.getAttacker(),
+                        log.getDefender(),
+                        log.getDamage(),
+                        log.getDefenderHpAfter()
+                )).toList();
+
+        ctx.json(new BattleResultDTO(
+                battle.getId(),
+                battle.getHero().getName(),
+                battle.getMonster().getName(),
+                battle.getResult(),
+                battle.getXpGained(),
+                logs.size(),
+                logs
+        ));
+    }
+
+    @Override
+    public void readAll(Context ctx) {
+        var battles = battleDao.readAll().stream()
+                .map(BattleDTO::new)
+                .toList();
+        ctx.json(battles);
     }
 
     @Override
     public void create(Context ctx) {
-        // delegate to startBattle which contains the battle simulation and persistence
-        startBattle(ctx);
+        ctx.status(405).json("Use /battles/start to create a battle");
     }
 
     @Override
     public void update(Context ctx) {
-        int id = ctx.pathParamAsClass("id", Integer.class).get();
-        Battle incoming = ctx.bodyAsClass(Battle.class);
-        Battle updated = dao.update(id, incoming);
-        ctx.status(updated != null ? 200 : 404);
-        ctx.json(updated != null ? new BattleDTO(updated) : "{ \"status\": 404, \"msg\": \"Not found\" }");
+        ctx.status(405).json("Battles cannot be updated");
     }
 
     @Override
     public void delete(Context ctx) {
-        int id = ctx.pathParamAsClass("id", Integer.class).get();
-        dao.delete(id);
-        ctx.status(200);
-        ctx.json("{ \"msg\": \"Battle deleted\" }");
+        ctx.status(405).json("Battles cannot be deleted");
     }
 
     @Override
     public boolean validatePrimaryKey(Integer id) {
-        return dao.validatePrimaryKey(id);
+        return battleDao.validatePrimaryKey(id);
     }
 
     @Override
     public Battle validateEntity(Context ctx) {
-        // Accept either a Battle JSON or StartRequest JSON -> try StartRequest first
-        try {
-            StartRequest req = ctx.bodyAsClass(StartRequest.class);
-            Hero h = new Hero();
-            h.setId(req.heroId);
-            Monster m = new Monster();
-            m.setId(req.monsterId);
-            Battle b = new Battle();
-            b.setHero(h);
-            b.setMonster(m);
-            return b;
-        } catch (Exception e) {
-            return ctx.bodyAsClass(Battle.class);
-        }
+        return null; // Not needed as battles are created through startBattle
     }
 
-    // Request helper class
-    public static class StartRequest {
-        public Integer heroId;
-        public Integer monsterId;
-        public String area;
-
-        // Optional detailed stats to simulate without DB lookups
-        public Integer heroHp;
-        public Integer heroAttack;
-        public Integer heroDefense;
-        public String heroName;
-        public Integer monsterHp;
-        public Integer monsterAttack;
-        public Integer monsterDefense;
-        public String monsterName;
-        public Integer monsterLevel;
-    }
+    private record BattleStartDTO(Integer heroId, Integer monsterId) {}
 }

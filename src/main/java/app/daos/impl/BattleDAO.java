@@ -10,6 +10,7 @@ import jakarta.persistence.TypedQuery;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
@@ -35,7 +36,6 @@ public class BattleDAO implements app.daos.IDAO<Battle, Integer> {
             Monster monster = em.find(Monster.class, battle.getMonster().getId());
             battle.setHero(hero);
             battle.setMonster(monster);
-            battle.setBattleDate(Instant.now());
             em.persist(battle);
             em.getTransaction().commit();
             return battle;

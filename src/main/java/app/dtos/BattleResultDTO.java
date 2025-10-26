@@ -1,15 +1,13 @@
 package app.dtos;
 
-import java.time.Instant;
 import java.util.List;
 
 public record BattleResultDTO(
         Integer id,
-        Integer heroId,
-        Integer monsterId,
+        String heroName,
+        String monsterName,
         String result,
         Integer xpGained,
-        Instant battleDate,
         int logCount,
         List<BattleLogDTO> logs
 ) {}

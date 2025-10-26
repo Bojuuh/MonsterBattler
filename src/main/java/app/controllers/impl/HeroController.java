@@ -70,4 +70,5 @@ public class HeroController implements IController<Hero, Integer> {
     public Hero validateEntity(Context ctx) {
         return ctx.bodyAsClass(Hero.class);
     }
+
 }

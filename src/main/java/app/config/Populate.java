@@ -9,10 +9,6 @@ import app.entities.Monster;
 
 import java.util.List;
 
-/**
- * Simple DB populator for heroes and monsters.
- * Call Populate.populate() at startup or run the main method to seed the DB.
- */
 public class Populate {
 
     public static void populate() {
@@ -51,8 +47,4 @@ public class Populate {
         System.out.println("Populated heroes and monsters into the database.");
     }
 
-    public static void main(String[] args) {
-        populate();
-        System.out.println("Populate finished.");
-    }
 }
