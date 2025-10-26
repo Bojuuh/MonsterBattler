@@ -9,29 +9,22 @@ import app.entities.Monster;
 
 import java.util.List;
 
+/**
+ * Simple DB populator for heroes and monsters.
+ * Call Populate.populate() at startup or run the main method to seed the DB.
+ */
 public class Populate {
 
     public static void populate() {
         var emf = HibernateConfig.getEntityManagerFactory();
-        HeroDAO heroDao = HeroDAO.getInstance(emf);
         MonsterDAO monsterDao = MonsterDAO.getInstance(emf);
 
-        List<Hero> existingHeroes = heroDao.readAll();
         List<Monster> existingMonsters = monsterDao.readAll();
 
-        if (!existingHeroes.isEmpty() || !existingMonsters.isEmpty()) {
-            System.out.println("Database already contains heroes or monsters - skipping populate.");
+        if (!existingMonsters.isEmpty()) {
+            System.out.println("Database already contains monsters - skipping populate.");
             return;
         }
-
-        // Heroes
-        Hero h1 = new Hero("Sir Gallant", 1, 100, 12, 6, 0);
-        Hero h2 = new Hero("Aria Swift", 2, 120, 15, 8, 10);
-        Hero h3 = new Hero("Dorn Ironfist", 3, 150, 18, 12, 30);
-
-        heroDao.create(h1);
-        heroDao.create(h2);
-        heroDao.create(h3);
 
         // Monsters
         Monster m1 = new Monster("Goblin", 1, 60, 8, 3, "Caves", 30);
@@ -47,4 +40,8 @@ public class Populate {
         System.out.println("Populated heroes and monsters into the database.");
     }
 
+    public static void main(String[] args) {
+        populate();
+        System.out.println("Populate finished.");
+    }
 }
