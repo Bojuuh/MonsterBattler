@@ -36,11 +36,10 @@ public final class BattleMapper {
 
         return new BattleResultDTO(
                 battle.getId(),
-                battle.getHero() != null ? battle.getHero().getId() : null,
-                battle.getMonster() != null ? battle.getMonster().getId() : null,
+                battle.getHero() != null ? battle.getHero().getName() : null,
+                battle.getMonster() != null ? battle.getMonster().getName() : null,
                 battle.getResult(),
                 battle.getXpGained(),
-                battle.getBattleDate(),
                 sortedLogs.size(),
                 sortedLogs
         );

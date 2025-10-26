@@ -1,100 +1,104 @@
-### A simple get request to the test endpoint. No need for login
-GET {{url}}/auth/test/
+### Full dev flow: populate, register/login, create hero, start battle, inspect logs
 
-### Populate the database with some data
-GET {{url}}/hotels/populate/
+# basic ping
+GET {{url}}/auth/test
+Accept: application/json
 
-### Create a new user - this one will only get a USER role by default
-POST {{url}}/auth/register/
+###
+# Populate DB with default monsters
+GET {{url}}/monsters/populate
+Accept: application/json
+
+###
+# Register user
+POST {{url}}/auth/register
+Content-Type: application/json
+Accept: application/json
 
 {
-    "username": "user",
-    "password": "test123"
+  "username": "player1",
+  "password": "secretpw"
 }
 
 ###
-POST {{url}}/auth/login/
+# Login and save token
+POST {{url}}/auth/login
+Content-Type: application/json
+Accept: application/json
 
 {
-    "username": "user",
-    "password": "test123"
+  "username": "player1",
+  "password": "secretpw"
 }
 
 > {%
-    client.global.set("jwt_token", response.body.token);
-    console.log("JWT Token:", client.global.get("jwt_token"));
+    const body = JSON.parse(response.body);
+    client.global.set("jwt_token", body.token);
+    client.global.set("username", body.username);
+    console.log("Token saved:", client.global.get("jwt_token"));
 %}
 
 ###
-GET {{url}}/protected/user_demo/
-Accept: application/json
-Authorization: Bearer {{jwt_token}}
-
-###
-GET {{url}}/protected/admin_demo/
-Accept: application/json
-Authorization: Bearer {{jwt_token}}
-
-### Add admin role to user
-POST {{url}}/auth/user/addrole/
-Accept: application/json
-Authorization: Bearer {{jwt_token}}
-
-{
-    "role": "admin"
-}
-Accept: application/json
-Authorization: Bearer {{jwt_token}}
-
-###
-GET {{url}}/hotels
-Accept: application/json
-Authorization: Bearer {{jwt_token}}
-
-###
-GET {{url}}/hotels/2
-
-###
-POST {{url}}/hotels
+# Create a hero for the logged-in user (no role required by default routes)
+POST {{url}}/heroes
 Content-Type: application/json
+Accept: application/json
 Authorization: Bearer {{jwt_token}}
 
 {
-  "hotelName": "Holiday Inn",
-  "hotelAddress": "Stuttgart",
-  "hotelType": "STANDARD"
+  "name": "Hero 1",
+  "level": 1,
+  "hp": 100,
+  "attack": 12,
+  "defense": 5,
+  "xp": 0
 }
 
+> {%
+    const body = JSON.parse(response.body);
+    client.global.set("hero_id", body.id);
+    console.log("Created hero id:", client.global.get("hero_id"));
+%}
+
 ###
-PUT {{url}}/hotels/3
+# List heroes
+GET {{url}}/heroes
+Accept: application/json
+
+### Battle Test Variables
+@hero_id = 1
+@monster_id = 1
+
+###
+# Start a battle: use created hero and an existing monster id (1)
+POST {{url}}/battles/start
 Content-Type: application/json
-
-{
-  "hotelName": "Ritz Carlton",
-  "hotelAddress": "London City",
-  "hotelType": "LUXURY"
-}
-
-###
-DELETE {{url}}/hotels/5
-Authorization: Bearer {{jwt_token}}
-
-// Room API
-###
-GET {{url}}/rooms
-Authorization: Bearer {{jwt_token}}
-
-###
-GET {{url}}/rooms/1
-Authorization: Bearer {{jwt_token}}
-
-###
-POST {{url}}/rooms/hotel/1
-Content-Type: application/json
+Accept: application/json
 Authorization: Bearer {{jwt_token}}
 
 {
-  "roomNumber": 11,
-  "roomPrice": 1150,
-  "roomType": "SINGLE"
+  "heroId": {{hero_id}},
+  "monsterId": {{monster_id}}
 }
+
+> {%
+    const body = JSON.parse(response.body);
+    client.global.set("battle_id", body.id);
+    console.log("Battle id:", client.global.get("battle_id"));
+%}
+
+###
+# List battles
+GET {{url}}/battles
+Accept: application/json
+Authorization: Bearer {{jwt_token}}
+
+
+###
+### battle details test variable
+@battle_id = 5
+###
+# Get last battle details
+GET {{url}}/battles/{{battle_id}}/details
+Accept: application/json
+Authorization: Bearer {{jwt_token}}

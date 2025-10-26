@@ -10,6 +10,7 @@ public class MonsterRoute {
 
     protected EndpointGroup getRoutes() {
         return () -> {
+            get("/populate", controller::populate);
             get("/", controller::readAll);
             post("/", controller::create);
             get("/{id}", controller::read);

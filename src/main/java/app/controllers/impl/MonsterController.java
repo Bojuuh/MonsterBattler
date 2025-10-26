@@ -70,4 +70,10 @@ public class MonsterController implements IController<Monster, Integer> {
     public Monster validateEntity(Context ctx) {
         return ctx.bodyAsClass(Monster.class);
     }
+
+    public void populate(Context ctx) {
+        dao.populate();
+        ctx.res().setStatus(200);
+        ctx.json("{ \"message\": \"Database has been populated\" }");
+    }
 }

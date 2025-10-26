@@ -13,6 +13,7 @@ public class BattleRoute {
             post("/start", controller::startBattle);
             get("/", controller::readAll);
             get("/{id}", controller::read);
+            get("/{id}/details", controller::getBattleDetails);
         };
     }
 }

@@ -15,6 +15,7 @@ public class Routes {
             path("/heroes", heroRoute.getRoutes());
             path("/monsters", monsterRoute.getRoutes());
             path("/battles", battleRoute.getRoutes());
+
         };
     }
 }

@@ -1,15 +1,16 @@
 package app.entities;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
-@Getter
+@Data
 @NoArgsConstructor
 @Entity
 @Table(name = "battle")
@@ -21,25 +22,17 @@ public class Battle {
 
     @ManyToOne
     @JoinColumn(name = "hero_id", nullable = false)
-    @Setter
     private Hero hero;
 
     @ManyToOne
     @JoinColumn(name = "monster_id", nullable = false)
-    @Setter
     private Monster monster;
 
-    @Setter
     @Column(name = "result")
     private String result; // VICTORY / DEFEAT / DRAW
 
-    @Setter
     @Column(name = "xp_gained")
     private Integer xpGained;
-
-    @Setter
-    @Column(name = "battle_date")
-    private Instant battleDate = Instant.now();
 
     @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private Set<BattleLog> logs = new HashSet<>();

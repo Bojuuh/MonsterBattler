@@ -3,10 +3,11 @@ package app.security.daos;
 import app.security.entities.Role;
 import app.security.entities.User;
 import app.security.exceptions.ValidationException;
+import dk.bugelhartmann.UserDTO;
 
 public interface ISecurityDAO {
-    User getVerifiedUser(String username, String password) throws ValidationException;
+    UserDTO getVerifiedUser(String username, String password) throws ValidationException;
     User createUser(String username, String password);
-    Role createRole(String role);
-    User addUserRole(String username, String role);
+    User addRoleToUser(UserDTO user, String newRole);
+    User removeRoleFromUser(String username, String role);
 }

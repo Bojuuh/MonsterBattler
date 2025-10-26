@@ -1,7 +1,9 @@
-1. Remake security
+1. Make a simple hero journey -> see how it works for now.
 2. Roles:
+- Anyone: for testing
 - Admin: able to delete users and monsters
 - Standard: usual player
 - Founder: able to play against "new" monsters
 3. Make battles work - Print out json
 4.
+Final boss: Deployment

@@ -1,9 +1,5 @@
 package app.security.exceptions;
 
-/**
- * Purpose: To handle No authorized exceptions in the API
- * Author: Thomas Hartmann
- */
 public class NotAuthorizedException extends Exception {
     private final int statusCode;
 
